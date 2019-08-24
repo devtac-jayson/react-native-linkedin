@@ -14,6 +14,7 @@ import {
   Image,
   // $DisableFlow
 } from 'react-native'
+import { Icon} from "native-base";
 import { WebView } from 'react-native-webview'
 import PropTypes from 'prop-types'
 import { pipe, evolve, propSatisfies, applySpec, propOr } from 'ramda'
@@ -296,6 +297,11 @@ export default class LinkedInModal extends React.Component {
           accessibilityTraits={['button']}
           onPress={this.open}
         >
+          <Icon
+            type="FontAwesome"
+            name="linkedin"
+            style={{ color: "#fff", fontSize: 30 }}
+          />
           <Text>{linkText}</Text>
         </TouchableOpacity>
     )
