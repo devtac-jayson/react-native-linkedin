@@ -3,42 +3,43 @@
  * @flow
  */
 
-import React from 'react'
+import React from "react";
 import {
   TouchableOpacity,
   View,
   ViewPropTypes,
-  Text,
   Modal,
   StyleSheet,
-  Image,
+  Image
   // $DisableFlow
-} from 'react-native'
-import { Icon} from "native-base";
-import { WebView } from 'react-native-webview'
-import PropTypes from 'prop-types'
-import { pipe, evolve, propSatisfies, applySpec, propOr } from 'ramda'
-import { v4 } from 'uuid'
-import querystring from 'query-string'
+} from "react-native";
+import { Icon, Text } from "native-base";
+import { WebView } from "react-native-webview";
+import PropTypes from "prop-types";
+import { pipe, evolve, propSatisfies, applySpec, propOr } from "ramda";
+import { v4 } from "uuid";
+import querystring from "query-string";
 
-const AUTHORIZATION_URL: string = 'https://www.linkedin.com/oauth/v2/authorization'
-const ACCESS_TOKEN_URL: string = 'https://www.linkedin.com/oauth/v2/accessToken'
+const AUTHORIZATION_URL: string =
+  "https://www.linkedin.com/oauth/v2/authorization";
+const ACCESS_TOKEN_URL: string =
+  "https://www.linkedin.com/oauth/v2/accessToken";
 
 export type LinkedInToken = {
   access_token?: string,
-  expires_in?: number,
-}
+  expires_in?: number
+};
 
 export type ErrorType = {
   type?: string,
-  message?: string,
-}
+  message?: string
+};
 
 type State = {
   raceCondition: boolean,
   modalVisible: boolean,
-  authState: string,
-}
+  authState: string
+};
 
 /* eslint-disable */
 type Props = {
@@ -58,85 +59,85 @@ type Props = {
   containerStyle?: any,
   wrapperStyle?: any,
   closeStyle?: any,
-  animationType?: 'none' | 'fade' | 'slide',
-  shouldGetAccessToken: boolean,
-}
+  animationType?: "none" | "fade" | "slide",
+  shouldGetAccessToken: boolean
+};
 /* eslint-enable */
 
-export const cleanUrlString = (state: string) => state.replace('#!', '')
+export const cleanUrlString = (state: string) => state.replace("#!", "");
 
 export const getCodeAndStateFromUrl: string => Object = pipe(
   querystring.extract,
   querystring.parse,
-  evolve({ state: cleanUrlString }),
-)
+  evolve({ state: cleanUrlString })
+);
 
 export const getErrorFromUrl: string => Object = pipe(
   querystring.extract,
   querystring.parse,
-  evolve({ error_description: cleanUrlString }),
-)
+  evolve({ error_description: cleanUrlString })
+);
 
 export const transformError: Object => Object = applySpec({
-  type: propOr('', 'error'),
-  message: propOr('', 'error_description'),
-})
+  type: propOr("", "error"),
+  message: propOr("", "error_description")
+});
 
 export const isErrorUrl: string => boolean = pipe(
   querystring.extract,
   querystring.parse,
-  propSatisfies(error => typeof error !== 'undefined', 'error'),
-)
+  propSatisfies(error => typeof error !== "undefined", "error")
+);
 
 export const injectedJavaScript = `
   setTimeout(function() {
     document.querySelector("input[type=text]").setAttribute("autocapitalize", "off");
   }, 1);
   true;
-`
+`;
 
 export const getAuthorizationUrl: Props => string = ({
-  authState,
-  clientID,
-  permissions,
-  redirectUri,
-}) =>
+                                                       authState,
+                                                       clientID,
+                                                       permissions,
+                                                       redirectUri
+                                                     }) =>
   `${AUTHORIZATION_URL}?${querystring.stringify({
-    response_type: 'code',
+    response_type: "code",
     client_id: clientID,
-    scope: permissions.join(' ').trim(),
+    scope: permissions.join(" ").trim(),
     state: authState,
-    redirect_uri: redirectUri,
-  })}`
+    redirect_uri: redirectUri
+  })}`;
 
 export const getPayloadForToken: (Props & { code: string }) => string = ({
-  clientID,
-  clientSecret,
-  code,
-  redirectUri,
-}) =>
+                                                                           clientID,
+                                                                           clientSecret,
+                                                                           code,
+                                                                           redirectUri
+                                                                         }) =>
   querystring.stringify({
-    grant_type: 'authorization_code',
+    grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
     client_id: clientID,
-    client_secret: clientSecret,
-  })
+    client_secret: clientSecret
+  });
 
 export const fetchToken: string => Promise<LinkedInToken> = async payload => {
   const response = await fetch(ACCESS_TOKEN_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      "Content-Type": "application/x-www-form-urlencoded"
     },
-    body: payload,
-  })
-  return await response.json()
-}
+    body: payload
+  });
+  return await response.json();
+};
 
 export const logError = (error: ErrorType) =>
   // eslint-disable-next-line
-  console.error(JSON.stringify(error, null, 2))
+  console.error(JSON.stringify(error, null, 2));
 
 export const onLoadStart = async (
   url: string,
@@ -145,55 +146,55 @@ export const onLoadStart = async (
   onError: Function,
   close: Function,
   getAccessToken: (token: string) => Promise<LinkedInToken | {}>,
-  shouldGetAccessToken: boolean,
+  shouldGetAccessToken: boolean
 ) => {
   if (isErrorUrl(url)) {
-    const err = getErrorFromUrl(url)
-    close()
-    onError(transformError(err))
+    const err = getErrorFromUrl(url);
+    close();
+    onError(transformError(err));
   } else {
-    const { code, state } = getCodeAndStateFromUrl(url)
+    const { code, state } = getCodeAndStateFromUrl(url);
     if (!shouldGetAccessToken) {
-      onSuccess(code)
+      onSuccess(code);
     } else if (state !== authState) {
       onError({
-        type: 'state_not_match',
-        message: `state is not the same ${state}`,
-      })
+        type: "state_not_match",
+        message: `state is not the same ${state}`
+      });
     } else {
-      const token: LinkedInToken | {} = await getAccessToken(code)
-      onSuccess(token)
+      const token: LinkedInToken | {} = await getAccessToken(code);
+      onSuccess(token);
     }
   }
-}
+};
 
 const styles = StyleSheet.create({
   constainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     paddingVertical: 40,
-    paddingHorizontal: 10,
+    paddingHorizontal: 10
   },
   wrapper: {
     flex: 1,
     borderRadius: 5,
     borderWidth: 10,
-    borderColor: 'rgba(0, 0, 0, 0.6)',
+    borderColor: "rgba(0, 0, 0, 0.6)"
   },
   close: {
-    position: 'absolute',
+    position: "absolute",
     top: 35,
     right: 5,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(0, 0, 0, 0.4)',
+    borderColor: "rgba(0, 0, 0, 0.4)",
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})
+    justifyContent: "center",
+    alignItems: "center"
+  }
+});
 
 export default class LinkedInModal extends React.Component {
   static propTypes = {
@@ -214,40 +215,43 @@ export default class LinkedInModal extends React.Component {
     wrapperStyle: ViewPropTypes.style,
     closeStyle: ViewPropTypes.style,
     animationType: PropTypes.string,
-    shouldGetAccessToken: PropTypes.bool,
-  }
+    shouldGetAccessToken: PropTypes.bool
+  };
   static defaultProps = {
     onError: logError,
-    permissions: ['r_liteprofile', 'r_emailaddress'],
-    linkText: 'Login with LinkedIn',
-    animationType: 'fade',
+    permissions: ["r_liteprofile", "r_emailaddress"],
+    linkText: "Login with LinkedIn",
+    animationType: "fade",
     containerStyle: StyleSheet.create({}),
     wrapperStyle: StyleSheet.create({}),
     closeStyle: StyleSheet.create({}),
-    shouldGetAccessToken: true,
-  }
+    shouldGetAccessToken: true
+  };
   state: State = {
     raceCondition: false,
     modalVisible: false,
-    authState: v4(),
-  }
+    authState: v4()
+  };
 
   componentWillUpdate(nextProps: Props, nextState: State) {
-    if (nextState.modalVisible !== this.state.modalVisible && nextState.modalVisible === true) {
-      const authState = nextProps.authState || v4()
-      this.setState(() => ({ raceCondition: false, authState }))
+    if (
+      nextState.modalVisible !== this.state.modalVisible &&
+      nextState.modalVisible === true
+    ) {
+      const authState = nextProps.authState || v4();
+      this.setState(() => ({ raceCondition: false, authState }));
     }
   }
 
   onNavigationStateChange = async ({ url }: Object) => {
-    const { raceCondition } = this.state
-    const { redirectUri, onError, shouldGetAccessToken } = this.props
+    const { raceCondition } = this.state;
+    const { redirectUri, onError, shouldGetAccessToken } = this.props;
 
     if (url.includes(redirectUri) && !raceCondition) {
-      const { onSignIn, onSuccess } = this.props
-      const { authState } = this.state
-      this.setState({ modalVisible: false, raceCondition: true })
-      if (onSignIn) onSignIn()
+      const { onSignIn, onSuccess } = this.props;
+      const { authState } = this.state;
+      this.setState({ modalVisible: false, raceCondition: true });
+      if (onSignIn) onSignIn();
       await onLoadStart(
         url,
         authState,
@@ -255,70 +259,80 @@ export default class LinkedInModal extends React.Component {
         onError,
         this.close,
         this.getAccessToken,
-        shouldGetAccessToken,
-      )
+        shouldGetAccessToken
+      );
     }
-  }
+  };
 
   getAuthorizationUrl: void => string = () =>
-    getAuthorizationUrl({ ...this.props, authState: this.state.authState })
+    getAuthorizationUrl({ ...this.props, authState: this.state.authState });
 
-  getAccessToken: string => Promise<LinkedInToken | {}> = async (code: string) => {
-    const { onError } = this.props
-    const payload: string = getPayloadForToken({ ...this.props, code })
-    const token = await fetchToken(payload)
+  getAccessToken: string => Promise<LinkedInToken | {}> = async (
+    code: string
+  ) => {
+    const { onError } = this.props;
+    const payload: string = getPayloadForToken({ ...this.props, code });
+    const token = await fetchToken(payload);
     if (token.error) {
-      onError(transformError(token))
-      return {}
+      onError(transformError(token));
+      return {};
     }
-    return token
-  }
+    return token;
+  };
 
-  props: Props
+  props: Props;
 
   close = () => {
-    const { onClose } = this.props
-    if (onClose) onClose()
-    this.setState({ modalVisible: false })
-  }
+    const { onClose } = this.props;
+    if (onClose) onClose();
+    this.setState({ modalVisible: false });
+  };
 
   open = () => {
-    const { onOpen } = this.props
-    if (onOpen) onOpen()
-    this.setState({ modalVisible: true })
-  }
+    const { onOpen } = this.props;
+    if (onOpen) onOpen();
+    this.setState({ modalVisible: true });
+  };
 
   renderButton = () => {
-    const { renderButton, linkText } = this.props
-    if (renderButton) return renderButton()
+    const { renderButton, linkText } = this.props;
+    if (renderButton) return renderButton();
     return (
       <TouchableOpacity
-          accessibilityComponentType={'button'}
-          accessibilityTraits={['button']}
-          onPress={this.open}
+        accessibilityComponentType={"button"}
+        accessibilityTraits={["button"]}
+        onPress={this.open}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center"
+          }}
         >
           <Icon
             type="FontAwesome"
             name="linkedin"
             style={{ color: "#fff", fontSize: 30 }}
           />
-          <Text>{linkText}</Text>
-        </TouchableOpacity>
-    )
-  }
+          <Text style={{ marginLeft: 5, color: "#fff" }}>{linkText}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   renderClose = () => {
-    const { renderClose } = this.props
-    if (renderClose) return renderClose()
+    const { renderClose } = this.props;
+    if (renderClose) return renderClose();
     return (
       // $DisableFlow
-      <Image source={require('./assets/x-white.png')} resizeMode="contain" />
-    )
-  }
+      <Image source={require("./assets/x-white.png")} resizeMode="contain" />
+    );
+  };
 
   renderWebview = () => {
-    const { modalVisible } = this.state
-    if (!modalVisible) return null
+    const { modalVisible } = this.state;
+    if (!modalVisible) return null;
 
     return (
       <WebView
@@ -329,15 +343,20 @@ export default class LinkedInModal extends React.Component {
         domStorageEnabled
         injectedJavaScript={injectedJavaScript}
       />
-    )
-  }
+    );
+  };
 
   render() {
-    const { modalVisible } = this.state
-    const { animationType, containerStyle, wrapperStyle, closeStyle } = this.props
+    const { modalVisible } = this.state;
+    const {
+      animationType,
+      containerStyle,
+      wrapperStyle,
+      closeStyle
+    } = this.props;
     return (
       <View>
-          {this.renderButton()}
+        {this.renderButton()}
         <Modal
           animationType={animationType}
           transparent
@@ -345,18 +364,20 @@ export default class LinkedInModal extends React.Component {
           onRequestClose={this.close}
         >
           <View style={[styles.constainer, containerStyle]}>
-            <View style={[styles.wrapper, wrapperStyle]}>{this.renderWebview()}</View>
+            <View style={[styles.wrapper, wrapperStyle]}>
+              {this.renderWebview()}
+            </View>
             <TouchableOpacity
               onPress={this.close}
               style={[styles.close, closeStyle]}
-              accessibilityComponentType={'button'}
-              accessibilityTraits={['button']}
+              accessibilityComponentType={"button"}
+              accessibilityTraits={["button"]}
             >
               {this.renderClose()}
             </TouchableOpacity>
           </View>
         </Modal>
       </View>
-    )
+    );
   }
 }
